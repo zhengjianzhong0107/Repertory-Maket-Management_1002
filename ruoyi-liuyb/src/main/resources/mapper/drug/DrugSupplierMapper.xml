@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.liuyb.mapper.DrugSupplierMapper">
+
+    <resultMap type="DrugSupplier" id="DrugSupplierResult">
+        <result property="supplierid" column="SupplierId"/>
+        <result property="suppliername" column="SupplierName"/>
+        <result property="supplieraddress" column="SupplierAddress"/>
+        <result property="supplieruser" column="SupplierUser"/>
+        <result property="supplierphone" column="SupplierPhone"/>
+        <result property="createtime" column="CreateTime"/>
+        <result property="supplierremark" column="SupplierRemark"/>
+    </resultMap>
+
+    <sql id="selectDrugSupplierVo">
+        select SupplierId, SupplierName, SupplierAddress, SupplierUser, SupplierPhone, CreateTime, SupplierRemark
+        from drug_supplier
+    </sql>
+
+    <select id="selectSupplierName" resultMap="DrugSupplierResult">
+        select SupplierName, SupplierUser, SupplierPhone
+        from drug_supplier
+    </select>
+
+    <select id="selectDrugSupplierByName" parameterType="String" resultMap="DrugSupplierResult">
+        <include refid="selectDrugSupplierVo"/>
+        where SupplierName = #{suppliername}
+    </select>
+
+    <select id="selectDrugSupplierList" parameterType="DrugSupplier" resultMap="DrugSupplierResult">
+        <include refid="selectDrugSupplierVo"/>
+        <where>
+            <if test="suppliername != null  and suppliername != ''">and SupplierName like concat('%', #{suppliername},
+                '%')
+            </if>
+            <if test="supplieruser != null  and supplieruser != ''">and SupplierUser like concat('%', #{supplieruser},
+                '%')
+            </if>
+            <if test="createtime != null ">and CreateTime = #{createtime}</if>
+        </where>
+        order by CreateTime desc
+    </select>
+
+    <select id="selectDrugSupplierBySupplierid" parameterType="Long" resultMap="DrugSupplierResult">
+        <include refid="selectDrugSupplierVo"/>
+        where SupplierId = #{supplierid}
+    </select>
+
+    <insert id="insertDrugSupplier" parameterType="DrugSupplier" useGeneratedKeys="true" keyProperty="supplierid">
+        insert into drug_supplier
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="suppliername != null and suppliername != ''">SupplierName,</if>
+            <if test="supplieraddress != null and supplieraddress != ''">SupplierAddress,</if>
+            <if test="supplieruser != null and supplieruser != ''">SupplierUser,</if>
+            <if test="supplierphone != null">SupplierPhone,</if>
+            CreateTime,
+            <if test="supplierremark != null">SupplierRemark,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="suppliername != null and suppliername != ''">#{suppliername},</if>
+            <if test="supplieraddress != null and supplieraddress != ''">#{supplieraddress},</if>
+            <if test="supplieruser != null and supplieruser != ''">#{supplieruser},</if>
+            <if test="supplierphone != null">#{supplierphone},</if>
+            curdate(),
+            <if test="supplierremark != null">#{supplierremark},</if>
+        </trim>
+    </insert>
+
+    <update id="updateDrugSupplier" parameterType="DrugSupplier">
+        update drug_supplier
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="suppliername != null and suppliername != ''">SupplierName = #{suppliername},</if>
+            <if test="supplieraddress != null and supplieraddress != ''">SupplierAddress = #{supplieraddress},</if>
+            <if test="supplieruser != null and supplieruser != ''">SupplierUser = #{supplieruser},</if>
+            <if test="supplierphone != null">SupplierPhone = #{supplierphone},</if>
+            <if test="createtime != null">CreateTime = #{createtime},</if>
+            <if test="supplierremark != null">SupplierRemark = #{supplierremark},</if>
+        </trim>
+        where SupplierId = #{supplierid}
+    </update>
+
+    <update id="updateDrugSupplierBysupplierName" parameterType="DrugSupplier">
+        update drug_supplier
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="supplieraddress != null and supplieraddress != ''">SupplierAddress = #{supplieraddress},</if>
+            <if test="supplieruser != null and supplieruser != ''">SupplierUser = #{supplieruser},</if>
+            <if test="supplierphone != null">SupplierPhone = #{supplierphone},</if>
+            <if test="supplierremark != null">SupplierRemark = #{supplierremark},</if>
+        </trim>
+        where SupplierName = #{suppliername}
+    </update>
+
+    <delete id="deleteDrugSupplierBySupplierid" parameterType="Long">
+        delete
+        from drug_supplier
+        where SupplierId = #{supplierid}
+    </delete>
+
+    <delete id="deleteDrugSupplierBySupplierids" parameterType="String">
+        delete from drug_supplier where SupplierId in
+        <foreach item="supplierid" collection="array" open="(" separator="," close=")">
+            #{supplierid}
+        </foreach>
+    </delete>
+</mapper>

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.liuyb.mapper.DrugOutMapper">
+
+    <resultMap type="DrugOut" id="DrugOutResult">
+        <result property="drugoutid" column="DrugOutId"/>
+        <result property="drugoutname" column="DrugOutName"/>
+        <result property="drugoutno" column="DrugOutNo"/>
+        <result property="drugouttime" column="DrugOutTime"/>
+        <result property="drugoutbatch" column="DrugOutBatch"/>
+        <result property="drugoutnum" column="DrugOutNum"/>
+        <result property="totalprice" column="totalprice"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="selectDrugOutVo">
+        select DrugOutId,
+               DrugOutName,
+               DrugOutNo,
+               DrugOutTime,
+               DrugOutBatch,
+               DrugOutNum,
+               StockNum,
+               drug.DrugOutPrice * DrugOutNum as totalprice
+        from drug_out
+                 left join stock
+                           on drug_out.DrugOutNo = stock.stockDrugNo
+                 LEFT JOIN drug
+                           ON drug.DrugNo = drug_out.DrugOutNo
+    </sql>
+
+    <select id="selectDrugOutList" parameterType="DrugOut" resultMap="DrugOutResult">
+        <include refid="selectDrugOutVo"/>
+        <where>
+            <if test="drugoutname != null  and drugoutname != ''">and DrugOutName like concat('%', #{drugoutname},
+                '%')
+            </if>
+            <if test="drugoutno != null ">and DrugOutNo like concat('%', #{drugoutno}, '%')</if>
+            <if test="drugouttime != null ">and DrugOutTime = #{drugouttime}</if>
+            <if test="drugoutbatch != null  and drugoutbatch != ''">and DrugOutBatch like
+                concat('%',#{drugoutbatch},'%')
+            </if>
+            <if test="drugoutnum != null">and DrugOutNum like concat('%',#{drugoutnum},'%')</if>
+        </where>
+        order by DrugOutTime desc
+    </select>
+
+    <select id="selectDrugOutByDrugoutid" parameterType="Long" resultMap="DrugOutResult">
+        <include refid="selectDrugOutVo"/>
+        where DrugOutId = #{drugoutid}
+    </select>
+
+    <!--本月出库记录  图表数据-->
+    <select id="selectDrugOutNoAndName" resultMap="DrugOutResult">
+        SELECT DrugOutNo,
+               any_value(DrugOutName)     as DrugOutName,
+               any_value(DrugOutTime)     as DrugOutTime,
+               SUM(any_value(DrugOutNum)) AS DrugOutNum
+        FROM `drug_out`
+        WHERE DATE_FORMAT(DrugOutTime, '%Y%m') = DATE_FORMAT(CURDATE(), '%Y%m')
+        GROUP BY DrugOutNo
+    </select>
+
+    <!-- 按月统计 只统计半年-->
+    <select id="selectDrugOutNumByMonth" resultMap="DrugOutResult">
+        SELECT SUM(any_value(DrugOutNum)) AS DrugOutNum,
+               any_value(DrugOutTime) As DrugOutTime
+        FROM drug_out
+        GROUP BY DATE_FORMAT(DrugOutTime, "%Y-%m")
+        ORDER BY DrugOutTime DESC LIMIT 0,6
+    </select>
+
+    <insert id="insertDrugOut" parameterType="DrugOut" useGeneratedKeys="true" keyProperty="drugoutid">
+        insert into drug_out
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="drugoutname != null and drugoutname != ''">DrugOutName,</if>
+            <if test="drugoutno != null">DrugOutNo,</if>
+            DrugOutTime,
+            create_time,
+            <if test="drugoutbatch != null">DrugOutBatch,</if>
+            <if test="drugoutnum != null">DrugOutNum,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="drugoutname != null and drugoutname != ''">#{drugoutname},</if>
+            <if test="drugoutno != null">#{drugoutno},</if>
+            curdate(),
+            now(),
+            <if test="drugoutbatch != null">#{drugoutbatch},</if>
+            <if test="drugoutnum != null and drugoutnum > 0">#{drugoutnum},</if>
+        </trim>
+    </insert>
+
+    <insert id="insertStock" parameterType="DrugOut" useGeneratedKeys="true">
+        INSERT INTO stock (StockDrugNo, StockDrugName, StockNum)
+        SELECT DrugOutNo as StockDrugNo, DrugOutName as StockDrugName, DrugOutNum as StockNum
+        FROM drug_out
+        ORDER BY DrugOutId DESC LIMIT 1
+        ON DUPLICATE KEY
+        UPDATE
+            StockNum=StockNum-
+        values (StockNum)
+    </insert>
+
+    <update id="updateDrugOut" parameterType="DrugOut">
+        update drug_out
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="drugoutname != null and drugoutname != ''">DrugOutName = #{drugoutname},</if>
+            <if test="drugoutno != null">DrugOutNo = #{drugoutno},</if>
+            <if test="drugouttime != null">DrugOutTime = #{drugouttime},</if>
+            <if test="drugoutbatch != null">DrugOutBatch = #{drugoutbatch},</if>
+            <if test="drugoutnum != null">DrugOutNum = #{drugoutnum},</if>
+        </trim>
+        where DrugOutId = #{drugoutid}
+    </update>
+
+    <delete id="deleteDrugOutByDrugoutid" parameterType="Long">
+        delete
+        from drug_out
+        where DrugOutId = #{drugoutid}
+    </delete>
+
+    <delete id="deleteDrugOutByDrugoutids" parameterType="String">
+        delete from drug_out where DrugOutId in
+        <foreach item="drugoutid" collection="array" open="(" separator="," close=")">
+            #{drugoutid}
+        </foreach>
+    </delete>
+</mapper>

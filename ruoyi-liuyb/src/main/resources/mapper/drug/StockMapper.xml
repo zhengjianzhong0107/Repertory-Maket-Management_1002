@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.liuyb.mapper.StockMapper">
+
+    <resultMap type="Stock" id="StockResult">
+        <result property="stockid" column="StockId"/>
+        <result property="stockdrugno" column="StockDrugNo"/>
+        <result property="stockdrugname" column="StockDrugName"/>
+        <result property="stocknum" column="StockNum"/>
+    </resultMap>
+
+    <sql id="selectStockVo">
+        select StockId,
+               StockDrugNo,
+               StockDrugName,
+               DrugVendor,
+               StockNum,
+               DrugPlace,
+               DrugWarning,
+               DrugUsed,
+               CAST(StockNum as signed) - DrugWarning as num
+        from stock
+                 left join drug
+                           on drug.DrugNo = stock.StockDrugNo
+    </sql>
+
+    <select id="selectStockList" parameterType="Stock" resultMap="StockResult">
+        <include refid="selectStockVo"/>
+        <where>
+            <if test="stockdrugno != null ">and StockDrugNo like concat('%', #{stockdrugno}, '%')</if>
+            <if test="stockdrugname != null  and stockdrugname != ''">and StockDrugName like concat('%',
+                #{stockdrugname}, '%')
+            </if>
+        </where>
+    </select>
+
+    <select id="selectStockList1" parameterType="Stock" resultMap="StockResult">
+        <include refid="selectStockVo"/>
+        <where>
+            <if test="1 == 1">and 0 >= CAST(StockNum as signed)-DrugWarning</if>
+        </where>
+    </select>
+
+    <select id="selectStockByStockid" parameterType="Long" resultMap="StockResult">
+        <include refid="selectStockVo"/>
+        where StockId = #{stockid}
+    </select>
+
+    <select id="selectStockByStockDrugNO" parameterType="Long" resultMap="StockResult">
+        <include refid="selectStockVo"/>
+        where stockdrugno = #{StockDrugNo}
+    </select>
+
+    <select id="selectDrugdetilInfoByDrugNo" parameterType="Long"
+            resultType="com.ruoyi.liuyb.domain.DrugJournalAccount">
+        SELECT '入库' as type, DrugInNo as drugNo, DrugInName AS drugName, DrugInTime as time,DrugInNum as num ,create_time as createTime
+        from drug_in
+        WHERE DrugInNo = #{DrugNo}
+        union all
+        SELECT '出库'        as type,
+               DrugOutNo   as drugNo,
+               DrugOutName as drugName,
+               DrugOutTime as time, DrugOutNum as num,create_time as createTime
+        from drug_out
+        WHERE DrugOutNo = #{DrugNo}
+        union all
+        SELECT '退回'            as type,
+               UntreadNo       AS drugNo,
+               UntreadDrugName as drugName,
+               UntreadTime as time, UntreadNum as num, create_time as createTime
+        FROM drug_untread
+        WHERE UntreadNo = #{DrugNo}
+        ORDER BY time DESC, createTime desc
+    </select>
+
+    <!--    新增，无则新增，有则更新-->
+    <insert id="insertStock" parameterType="Stock" useGeneratedKeys="true" keyProperty="stockid">
+        insert into stock
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="stockdrugno != null">StockDrugNo,</if>
+            <if test="stockdrugname != null and stockdrugname != ''">StockDrugName,</if>
+            <if test="stocknum != null">StockNum,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="stockdrugno != null">#{stockdrugno},</if>
+            <if test="stockdrugname != null and stockdrugname != ''">#{stockdrugname},</if>
+            <if test="stocknum != null">#{stocknum},</if>
+        </trim>
+        ON DUPLICATE KEY UPDATE
+        StockNum=StockNum+#{stocknum}
+    </insert>
+
+    <update id="updateStock" parameterType="Stock">
+        update stock
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="stockdrugno != null">StockDrugNo = #{stockdrugno},</if>
+            <if test="stockdrugname != null and stockdrugname != ''">StockDrugName = #{stockdrugname},</if>
+            <if test="stocknum != null">StockNum = #{stocknum},</if>
+        </trim>
+        where StockId = #{stockid}
+    </update>
+
+    <delete id="deleteStockByStockid" parameterType="Long">
+        delete
+        from stock
+        where StockId = #{stockid}
+    </delete>
+
+    <delete id="deleteStockByStockids" parameterType="String">
+        delete from stock where StockId in
+        <foreach item="stockid" collection="array" open="(" separator="," close=")">
+            #{stockid}
+        </foreach>
+    </delete>
+</mapper>

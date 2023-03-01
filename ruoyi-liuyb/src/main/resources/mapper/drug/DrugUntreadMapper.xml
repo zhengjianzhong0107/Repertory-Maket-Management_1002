@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.liuyb.mapper.DrugUntreadMapper">
+
+    <resultMap type="DrugUntread" id="DrugUntreadResult">
+        <result property="untreadid" column="UntreadId"/>
+        <result property="untreadno" column="UntreadNo"/>
+        <result property="untreaddrugname" column="UntreadDrugName"/>
+        <result property="untreadsuppliername" column="UntreadSupplierName"/>
+        <result property="untreaddrugvendor" column="UntreadDrugVendor"/>
+        <result property="untreadnum" column="UntreadNum"/>
+        <result property="untreadtime" column="UntreadTime"/>
+        <result property="untreadreason" column="UntreadReason"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="selectDrugUntreadVo">
+        select UntreadId,
+               UntreadNo,
+               UntreadDrugName,
+               UntreadSupplierName,
+               UntreadDrugVendor,
+               UntreadNum,
+               UntreadTime,
+               UntreadReason
+        from drug_untread
+    </sql>
+
+    <select id="selectDrugUntreadList" parameterType="DrugUntread" resultMap="DrugUntreadResult">
+        <include refid="selectDrugUntreadVo"/>
+        <where>
+            <if test="untreadno != null ">and UntreadNo like concat('%', #{untreadno}, '%')</if>
+            <if test="untreaddrugname != null  and untreaddrugname != ''">and UntreadDrugName like concat('%',
+                #{untreaddrugname}, '%')
+            </if>
+            <if test="untreadsuppliername != null  and untreadsuppliername != ''">and UntreadSupplierName like
+                concat('%', #{untreadsuppliername}, '%')
+            </if>
+            <if test="untreaddrugvendor != null  and untreaddrugvendor != ''">and UntreadDrugVendor like concat('%',
+                #{untreaddrugvendor}, '%')
+            </if>
+            <if test="untreadtime !=null">and UntreadTime = #{untreadtime}</if>
+        </where>
+        order by UntreadTime desc
+    </select>
+
+    <select id="selectUntreadChart" resultMap="DrugUntreadResult">
+        SELECT UntreadDrugName, UntreadNum, UntreadTime
+        from drug_untread
+        ORDER BY UntreadTime DESC LIMIT 30
+    </select>
+
+    <select id="selectDrugUntreadByUntreadid" parameterType="Long" resultMap="DrugUntreadResult">
+        <include refid="selectDrugUntreadVo"/>
+        where UntreadId = #{untreadid}
+    </select>
+
+    <insert id="insertDrugUntread" parameterType="DrugUntread" useGeneratedKeys="true" keyProperty="untreadid">
+        insert into drug_untread
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="untreadno != null">UntreadNo,</if>
+            <if test="untreaddrugname != null and untreaddrugname != ''">UntreadDrugName,</if>
+            <if test="untreadsuppliername != null and untreadsuppliername != ''">UntreadSupplierName,</if>
+            <if test="untreaddrugvendor != null and untreaddrugvendor != ''">UntreadDrugVendor,</if>
+            <if test="untreadnum != null">UntreadNum,</if>
+            UntreadTime,
+            create_time,
+            <if test="untreadreason != null and untreadreason != ''">UntreadReason,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="untreadno != null">#{untreadno},</if>
+            <if test="untreaddrugname != null and untreaddrugname != ''">#{untreaddrugname},</if>
+            <if test="untreadsuppliername != null and untreadsuppliername != ''">#{untreadsuppliername},</if>
+            <if test="untreaddrugvendor != null and untreaddrugvendor != ''">#{untreaddrugvendor},</if>
+            <if test="untreadnum != null">#{untreadnum},</if>
+            curdate(),
+            now(),
+            <if test="untreadreason != null and untreadreason != ''">#{untreadreason},</if>
+        </trim>
+    </insert>
+
+    <insert id="insertStock" parameterType="DrugUntread" useGeneratedKeys="true">
+        INSERT INTO stock (StockDrugNo, StockDrugName, StockNum)
+        SELECT UntreadNo as StockDrugNo, UntreadDrugName as StockDrugName, UntreadNum as StockNum
+        FROM drug_untread
+        ORDER BY UntreadId DESC LIMIT 1
+        ON DUPLICATE KEY
+        UPDATE
+            StockNum=StockNum-
+        values (StockNum)
+    </insert>
+
+    <update id="updateDrugUntread" parameterType="DrugUntread">
+        update drug_untread
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="untreadno != null">UntreadNo = #{untreadno},</if>
+            <if test="untreaddrugname != null and untreaddrugname != ''">UntreadDrugName = #{untreaddrugname},</if>
+            <if test="untreadsuppliername != null and untreadsuppliername != ''">UntreadSupplierName =
+                #{untreadsuppliername},
+            </if>
+            <if test="untreaddrugvendor != null and untreaddrugvendor != ''">UntreadDrugVendor = #{untreaddrugvendor},
+            </if>
+            <if test="untreadnum != null">UntreadNum = #{untreadnum},</if>
+            <if test="untreadtime != null">UntreadTime = #{untreadtime},</if>
+            <if test="untreadreason != null and untreadreason != ''">UntreadReason = #{untreadreason},</if>
+        </trim>
+        where UntreadId = #{untreadid}
+    </update>
+
+    <delete id="deleteDrugUntreadByUntreadid" parameterType="Long">
+        delete
+        from drug_untread
+        where UntreadId = #{untreadid}
+    </delete>
+
+    <delete id="deleteDrugUntreadByUntreadids" parameterType="String">
+        delete from drug_untread where UntreadId in
+        <foreach item="untreadid" collection="array" open="(" separator="," close=")">
+            #{untreadid}
+        </foreach>
+    </delete>
+</mapper>

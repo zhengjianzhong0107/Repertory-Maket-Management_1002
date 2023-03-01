@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.liuyb.mapper.DrugInMapper">
+
+    <resultMap type="DrugIn" id="DrugInResult">
+        <result property="druginid" column="DrugInId"/>
+        <result property="druginno" column="DrugInNo"/>
+        <result property="druginname" column="DrugInName"/>
+        <result property="drugsuppliername" column="DrugSupplierName"/>
+        <result property="drugintime" column="DrugInTime"/>
+        <result property="druginbatch" column="DrugInBatch"/>
+        <result property="druginfirm" column="DrugInFirm"/>
+        <result property="druginnum" column="DrugInNum"/>
+        <result property="druginproductiontime" column="DrugInProductionTime"/>
+        <result property="druginprice" column="DrugInPrice"/>
+        <result property="totalprice" column="totalprice"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <!--  计算药品剩余过期天数  字段time-->
+    <sql id="selectDrugInVo">
+        select DrugInId,
+               DrugInNo,
+               DrugInName,
+               DrugSupplierName,
+               DrugInTime,
+               DrugInBatch,
+               DrugInFirm,
+               DrugInNum,
+               DrugInPrice,
+               DrugInNum * DrugInPrice as totalprice,
+               DrugInProductionTime,
+               DrugExpirydata,
+               TO_DAYS(DATE_ADD(DrugInProductionTime, INTERVAL DrugExpirydata MONTH)) - TO_DAYS(CURDATE()) as time
+        from drug_in
+            inner JOIN drug
+        ON drug.DrugNo = drug_in.DrugInNo
+    </sql>
+
+    <select id="selectDrugInList" parameterType="DrugIn" resultMap="DrugInResult">
+        <include refid="selectDrugInVo"/>
+        <where>
+            <if test="druginno != null ">and DrugInNo like concat('%', #{druginno}, '%')</if>
+            <if test="druginname != null  and druginname != ''">and DrugInName like concat('%', #{druginname}, '%')</if>
+            <if test="drugintime != null ">and DrugInTime = #{drugintime}</if>
+            <if test="druginfirm != null  and druginfirm != ''">and DrugInFirm like concat('%', #{druginfirm} ,'%')</if>
+        </where>
+        order by DrugInTime desc
+    </select>
+
+    <select id="selectDrugInList1" parameterType="DrugIn" resultMap="DrugInResult">
+        <include refid="selectDrugInVo"/>
+        <where>
+            <if test="druginno != null ">and DrugInNo like concat('%', #{druginno}, '%')</if>
+            <if test="druginname != null  and druginname != ''">and DrugInName like concat('%', #{druginname}, '%')</if>
+            <if test="drugintime != null ">and DrugInTime = #{drugintime}</if>
+            <if test="druginfirm != null  and druginfirm != ''">and DrugInFirm like concat('%', #{druginfirm} ,'%')</if>
+            <if test="1==1">and 90 >= TO_DAYS(DATE_ADD(DrugInProductionTime,INTERVAL DrugExpirydata
+                MONTH))-TO_DAYS(CURDATE())
+            </if>
+        </where>
+        order by DrugInTime desc
+    </select>
+
+    <select id="selectDrugInByDruginid" parameterType="Long" resultMap="DrugInResult">
+        <include refid="selectDrugInVo"/>
+        where DrugInId = #{druginid}
+    </select>
+
+    <!-- test-->
+    <select id="selectDrugInNoName" resultMap="DrugInResult">
+        select DrugInNo, DrugInName, DrugExpirydata
+        from drug_in
+                 inner JOIN drug
+                            ON drug.DrugNo = drug_in.DrugInNo
+    </select>
+
+    <!--  查询入库表的药品总入库 -->
+    <select id="selectDrugInNameAndNum" resultMap="DrugInResult">
+        SELECT DrugInNo,
+               any_value(DrugInName)     as DrugInName,
+               any_value(DrugInTime)     as DrugInTime,
+               SUM(any_value(DrugInNum)) AS druginnum
+        FROM drug_in
+        WHERE DATE_FORMAT(DrugInTime, '%Y%m') = DATE_FORMAT(CURDATE(), '%Y%m')
+        GROUP BY DrugInNo
+    </select>
+    <!--查询入库信息 -->
+    <select id="selectDrugInBatch" resultMap="DrugInResult">
+        SELECT DISTINCT (DrugInBatch), DrugInNo, DrugInName, StockNum as druginnum
+        FROM drug_in
+                 LEFT JOIN stock
+                           ON drug_in.DrugInNo = stock.StockDrugNo
+    </select>
+
+    <!--  按月查询入库数据统计 只统计半年 -->
+    <select id="selectDrugInNumByMonth" resultMap="DrugInResult">
+        SELECT sum(any_value(DrugInNum)) AS DrugInNum,
+               any_value(DrugInTime) As DrugInTime
+        FROM drug_in
+        GROUP BY DATE_FORMAT(DrugInTime, "%Y-%m")
+        ORDER BY DrugInTime DESC LIMIT 0,6
+    </select>
+
+    <insert id="insertDrugIn" parameterType="DrugIn" useGeneratedKeys="true" keyProperty="druginid">
+        insert into drug_in
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="druginno != null">DrugInNo,</if>
+            <if test="druginname != null and druginname != ''">DrugInName,</if>
+            <if test="drugsuppliername !=null and drugsuppliername !=''">DrugSupplierName,</if>
+            DrugInTime,
+            create_time,
+            <if test="druginbatch != null">DrugInBatch,</if>
+            <if test="druginfirm != null and druginfirm != ''">DrugInFirm,</if>
+            <if test="druginnum != null and druginnum >=0">DrugInNum,</if>
+            <if test="druginproductiontime != null">DrugInProductionTime,</if>
+            <if test="druginprice != null and druginprice != ''">DrugInPrice,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="druginno != null">#{druginno},</if>
+            <if test="druginname != null and druginname != ''">#{druginname},</if>
+            <if test="drugsuppliername !=null and drugsuppliername !=''">#{drugsuppliername},</if>
+            curdate(),
+            now(),
+            <if test="druginbatch != null">#{druginbatch},</if>
+            <if test="druginfirm != null and druginfirm != ''">#{druginfirm},</if>
+            <if test="druginnum != null and druginnum >=0">#{druginnum},</if>
+            <if test="druginproductiontime != null">#{druginproductiontime},</if>
+            <if test="druginprice != null and druginprice != ''">#{druginprice},</if>
+        </trim>
+    </insert>
+
+    <!--存在即更新  重复密钥更新-->
+    <insert id="insertStock" parameterType="DrugIn" useGeneratedKeys="true">
+        INSERT INTO stock (StockDrugNo, StockDrugName, StockNum)
+        SELECT DrugInNo as StockDrugNo, DrugInName as StockDrugName, DrugInNum as StockNum
+        FROM drug_in
+        ORDER BY DrugInId DESC LIMIT 1
+        ON DUPLICATE KEY
+        UPDATE
+            StockNum=StockNum+
+        values (StockNum)
+    </insert>
+
+    <update id="updateDrugIn" parameterType="DrugIn">
+        update drug_in
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="druginno != null">DrugInNo = #{druginno},</if>
+            <if test="druginname != null and druginname != ''">DrugInName = #{druginname},</if>
+            <if test="drugsuppliername !=null and drugsuppliername !=''">DrugSupplierName = #{drugsuppliername},</if>
+            <if test="drugintime != null">DrugInTime = #{drugintime},</if>
+            <if test="druginbatch != null">DrugInBatch = #{druginbatch},</if>
+            <if test="druginfirm != null and druginfirm != ''">DrugInFirm = #{druginfirm},</if>
+            <if test="druginnum != null">DrugInNum = #{druginnum},</if>
+            <if test="druginproductiontime != null">DrugInProductionTime = #{druginproductiontime},</if>
+            <if test="druginprice != null and druginprice != ''">DrugInPrice = #{druginprice},</if>
+        </trim>
+        where DrugInId = #{druginid}
+    </update>
+
+    <delete id="deleteDrugInByDruginid" parameterType="Long">
+        delete
+        from drug_in
+        where DrugInId = #{druginid}
+    </delete>
+
+    <delete id="deleteDrugInByDruginids" parameterType="String">
+        delete from drug_in where DrugInId in
+        <foreach item="druginid" collection="array" open="(" separator="," close=")">
+            #{druginid}
+        </foreach>
+    </delete>
+</mapper>
