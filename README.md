@@ -96,4 +96,3 @@ Node >= 12
 
 ![商品退回管理](yanshitu/tuihui.png)
 
-4. 系统管理和日志管理模块为[若依系统](http://www.ruoyi.vip/)模块。
